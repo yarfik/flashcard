@@ -9,7 +9,11 @@ random_word = {}
 timeout = ""
 
 # --------------------------------- data -------------------------------------
-dt_frame = read_csv('./data/french_words.csv')
+try:
+    dt_frame = read_csv('./data/words_to_learn.csv')
+except FileNotFoundError:
+    dt_frame = read_csv('./data/french_words.csv')
+
 dictionary = dt_frame.to_dict(orient="records")
 
 root = Tk()
@@ -36,26 +40,29 @@ def flip_card():
     canvas.itemconfig(flashcard, image=back_image)
     canvas.itemconfig(txt_title, text=BASE_LANG, fill="white")
     canvas.itemconfig(txt_word, text=random_word[BASE_LANG], fill="white")
-    root.after_cancel(timeout)
+    # root.after_cancel(timeout)
 
 
 def set_front_face(txt):
-    global timeout
     canvas.itemconfig(flashcard, image=front_image)
     canvas.itemconfig(txt_title, text=FOREIGN_LANG, fill="black")
     canvas.itemconfig(txt_word, text=txt, fill="black")
-    timeout = root.after(ms=3000, func=flip_card)
-
-
-# def set_back_face(txt):
-#     canvas.itemconfig(txt_title, text=BASE_LANG)
-#     canvas.itemconfig(txt_word, text=txt)
 
 
 def next_card():
-    global random_word
+    global random_word, timeout
+    root.after_cancel(timeout)
     random_word = pick_random_word()
     set_front_face(random_word["French"])
+    timeout = root.after(ms=3000, func=flip_card)
+
+
+def take_out_card():
+    global random_word, dictionary
+    dictionary.remove(random_word)
+    new_data = DataFrame(dictionary)
+    new_data.to_csv("./data/words_to_learn.csv", index=False)
+    next_card()
 
 
 img_wrong = PhotoImage(file="./images/wrong.png")
@@ -65,9 +72,10 @@ button_wrong.grid(row=1, column=0)
 
 img_right = PhotoImage(file="./images/right.png")
 button_right = Button(image=img_right, highlightthickness=0)
-button_right.config(relief="flat", background=BACKGROUND_COLOR, command=next_card)
+button_right.config(relief="flat", background=BACKGROUND_COLOR, command=take_out_card)
 button_right.grid(row=1, column=1)
 
+timeout = root.after(ms=3000, func=flip_card)
 next_card()
 
 # print(dictionary)
